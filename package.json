@@ -1,0 +1,16 @@
+{
+  "name": "finddiff",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+  "start": "ts-node src/index.ts"
+},
+  "author": "Animesh Kumar",
+  "license": "ISC",
+  "description": "Find differences between two objects  ",
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
