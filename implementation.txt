@@ -1,0 +1,172 @@
+1. Initialize project
+mkdir audit-utility
+cd audit-utility
+npm init -y
+
+✅ 2. Install TypeScript
+npm install typescript ts-node @types/node --save-dev
+
+✅ 3. Create TypeScript config
+npx tsc --init
+
+
+Modify tsconfig.json minimally:
+
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "rootDir": "src",
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "strict": false
+  }
+}
+
+✅ 4. Create folder structure
+/audit-utility
+   /src
+      index.ts
+      deepDiff.ts
+
+✅ 5. deepDiff.ts — your own logic (production-grade)
+
+Create src/deepDiff.ts:
+
+export type DiffResult = {
+  path: string;
+  type: "added" | "removed" | "updated";
+  oldValue?: any;
+  newValue?: any;
+};
+
+export function deepDiff(oldData: any, newData: any, parentPath = ""): DiffResult[] {
+  const changes: DiffResult[] = [];
+
+  const oldKeys = oldData && typeof oldData === "object" ? Object.keys(oldData) : [];
+  const newKeys = newData && typeof newData === "object" ? Object.keys(newData) : [];
+
+  const allKeys = new Set([...oldKeys, ...newKeys]);
+
+  for (const key of allKeys) {
+    const path = parentPath ? `${parentPath}.${key}` : key;
+
+    const oldValue = oldData?.[key];
+    const newValue = newData?.[key];
+
+    // removed
+    if (!(key in newData)) {
+      changes.push({
+        path,
+        type: "removed",
+        oldValue
+      });
+      continue;
+    }
+
+    // added
+    if (!(key in oldData)) {
+      changes.push({
+        path,
+        type: "added",
+        newValue
+      });
+      continue;
+    }
+
+    // both are objects → deep compare
+    if (isObject(oldValue) && isObject(newValue)) {
+      changes.push(...deepDiff(oldValue, newValue, path));
+      continue;
+    }
+
+    // array change
+    if (Array.isArray(oldValue) && Array.isArray(newValue)) {
+      if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+        changes.push({
+          path,
+          type: "updated",
+          oldValue,
+          newValue
+        });
+      }
+      continue;
+    }
+
+    // primitive updated
+    if (oldValue !== newValue) {
+      changes.push({
+        path,
+        type: "updated",
+        oldValue,
+        newValue
+      });
+    }
+  }
+
+  return changes;
+}
+
+function isObject(v: any) {
+  return v && typeof v === "object" && !Array.isArray(v);
+}
+
+✅ 6. index.ts — test it locally
+
+Create src/index.ts:
+
+import { deepDiff } from "./deepDiff";
+
+const oldData = {
+  name: "Vanshika",
+  address: {
+    city: "Araria",
+    pin: 854311
+  },
+  skills: ["film", "editing"]
+};
+
+const newData = {
+  name: "Vanshika Kumari",
+  address: {
+    city: "Araria",
+    pin: 854312
+  },
+  skills: ["film", "editing", "direction"]
+};
+
+console.log("Changes:", deepDiff(oldData, newData));
+
+✅ 7. Add run script in package.json
+"scripts": {
+  "start": "ts-node src/index.ts"
+}
+
+✅ 8. Run your TypeScript deep diff utility
+npm start
+
+✅ Output Example
+[
+  {
+    path: "name",
+    type: "updated",
+    oldValue: "Vanshika",
+    newValue: "Vanshika Kumari"
+  },
+  {
+    path: "address.pin",
+    type: "updated",
+    oldValue: 854311,
+    newValue: 854312
+  },
+  {
+    path: "skills",
+    type: "updated",
+    oldValue: ["film", "editing"],
+    newValue: ["film", "editing", "direction"]
+  }
+]
+
+🎉 Done!
+
+You can now build your entire audit logging pipeline around this completely custom deep diff logic.
